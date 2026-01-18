@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Quest Widget POC</title>
+  <style>
+    /* Reset */
+    html, body { margin:0; padding:0; background:transparent; font-family:'Inter', system-ui, sans-serif; }
+    .hidden { display:none; }
+
+    /* App container */
+    #app-container { width:100%; max-width:680px; margin:2rem auto; position:relative; }
+
+    /* Dragon Idle/Alert */
+    #dragon-container { position:relative; transition:opacity .5s ease; }
+    #dragon-img { width:100%; display:block; }
+    #showQuestBtn.visible { opacity:1; animation:buttonPulse 2s infinite alternate ease-in-out; }
+    #showQuestBtn {
+      position:absolute;
+      bottom:2.65rem;
+      left:34%;
+      transform:translateX(-50%);
+      background:transparent;
+      border:none;
+      color:#FFF;
+      font-size:1.4rem;
+      line-height:1;
+      cursor:pointer;
+      opacity:0;
+      transition:
+        opacity 0.3s ease,
+        transform 0.2s ease,
+        text-shadow 0.3s ease;
+      text-shadow:0 2px 4px rgba(0,0,0,.6);
+    }
+#showQuestBtn {
+  /* …existing props… */
+ 
+}
+
+#showQuestBtn:hover {
+  transform: scale(1.05);
+  text-shadow:
+    0 2px 6px rgba(255,255,255,0.5),
+    0 0 8px rgba(255,255,255,0.3);
+}
+
+
+    @keyframes buttonPulse { from{transform:scale(1);} to{transform:scale(1.03);} }
+
+    /* Quest UI */
+    #quest-container {
+      background:#F5F1EF;
+      border-radius:12px;
+      padding:1.5rem;
+      box-shadow:0 4px 12px rgba(0,0,0,.05);
+      position:relative;
+      color:#3F322E;
+    }
+    #exitQuest {
+      position:absolute; top:.75rem; right:.75rem;
+      background:transparent; border:none; font-size:1.25rem;
+      cursor:pointer; color:#836C63; transition:transform .1s;
+    }
+    #exitQuest:hover { transform:scale(1.1); }
+
+    /* Desktop inline refresh next to title */
+    #refreshQuest {
+      display:inline-block; vertical-align:middle;
+      background:transparent; border:none; color:#836C63;
+      font-size:1.25rem; cursor:pointer; transition:color .2s;
+      margin-left:.5rem; margin-top:0;
+    }
+    #refreshQuest:hover:not(:disabled) { color:#2D3748; }
+    #refreshQuest:disabled { opacity:.4; cursor:not-allowed; }
+
+    #expiresLabel {
+      position:absolute; bottom:1rem; right:1.5rem;
+      font-size:.9rem; color:#718096; transition:opacity .2s ease;
+    }
+
+    #quest-widget { display:flex; align-items:center; }
+    #quest-details { flex:2; }
+    #quest-details h2 {
+      display:inline-block; margin:0 0 .5rem 0;
+      font-size:1.5rem; font-weight:600; vertical-align:middle;
+      margin-right:.5rem;
+    }
+    #desc { margin:0 0 1rem; font-style:italic; }
+    #metadata { display:flex; gap:1.5rem; font-size:.9rem; color:#836C63; }
+
+    #timer-section { flex:1; text-align:center; border-left:1px solid #D1C8C4; padding-left:1.5rem; }
+    #timerDisplay { font-size:2.5rem; font-weight:700; }
+
+    #controls { margin-top:1rem; display:flex; gap:1rem; }
+    #controls button {
+      padding:.75rem 1.25rem; border:none; border-radius:8px;
+      font-size:1rem; font-weight:500; cursor:pointer;
+      transition:background .2s, transform .1s;
+    }
+    #startQuest { background:#8B6B61; color:#fff; }
+    #startQuest:hover { background:#A78273; }
+    #completeQuest { background:#6C8E74; color:#fff; }
+    #completeQuest:hover { background:#89B49A; }
+
+    /* Completion Popup */
+    #completionPopup {
+      position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+      background:rgba(63,50,46,.9); color:#fff;
+      padding:1rem 1.5rem; border-radius:8px; font-size:1rem;
+      z-index:1000; opacity:0; transition:opacity .3s ease;
+    }
+    #completionPopup.visible { opacity:1; }
+
+    /* OS Dark Mode */
+    @media (prefers-color-scheme: dark) {
+      #quest-container { background:#2D2A28; box-shadow:0 4px 12px rgba(0,0,0,.7); color:#E1DCD8; border:1px solid rgba(255,255,255,.15); margin: 1rem; }
+      #exitQuest, #refreshQuest { color:#CCC; }
+      #desc { color:#BDB4B1; }
+      #metadata { color:#A49792; }
+      #timer-section { border-left:1px solid #4A4744; }
+      #timerDisplay { color:#E1DCD8; }
+      #controls button { color:#fff; }
+      #startQuest { background:#66564D; }
+      #startQuest:hover { background:#7F6E67; }
+      #completeQuest { background:#4F695E; }
+      #completeQuest:hover { background:#6B857A; }
+      #expiresLabel { color:#AAA; }
+    }
+    
+    /* small phones */
+@media (max-width: 370px) {
+  #showQuestBtn {
+    bottom: 20%;
+    font-size: 1rem;
+    left: 36%;
+  }
+}
+
+    /* Mobile */
+    @media (min-width: 370px) and (max-width:480px) {
+      #quest-container { padding:1rem; margin:1rem; }
+      #quest-details { display:block; }
+      #quest-details h2 { display:block; }
+      #refreshQuest { display:inline-block; font-size:1rem; margin-left:.5rem; }
+      #desc { font-size:.85rem; margin-top:.5rem; }
+      #metadata { display:flex; gap:1rem; font-size:.8rem; margin-top:.5rem; }
+      #timerDisplay { font-size:2rem; }
+      #startQuest, #completeQuest { font-size:.9rem; padding:.5rem 1rem; }
+      #showQuestBtn { bottom:21%; font-size:1.2rem; left: 36% }
+      #quest-widget { flex-direction:column; align-items:flex-start; }
+      #timer-section { border-left:none; margin-top:1rem; padding-left:0; }
+    }
+
+
+/* medium devices */
+@media (min-width: 480px) and (max-width: 550px) {
+  #quest-container { padding:1rem; margin:1rem; }
+  #showQuestBtn {
+    bottom: 21%;
+    font-size: 1.6rem;
+    left: 35%
+  }
+}
+    
+    /* medium devices */
+@media (min-width: 551px) and (max-width: 640px) {
+  #quest-container { padding:1rem; margin:1rem; }
+  #showQuestBtn {
+    bottom: 22%;
+    font-size: 1.6rem;
+    left: 37%;
+  }
+}
+
+
+/* large tablets / small desktops */
+@media (min-width: 641px){
+  #quest-container { padding:1rem; margin:1rem; }
+  #showQuestBtn {
+    bottom: 21%;
+    font-size: 1.85rem;
+    left: 37%;
+  }
+}
+    /* Notion Dark Mode */
+    .notion-dark #quest-container { background:#2D2A28; box-shadow:0 4px 12px rgba(0,0,0,.7); color:#E1DCD8; border:1px solid rgba(255,255,255,.15); }
+    .notion-dark #exitQuest, .notion-dark #refreshQuest { color:#CCC; }
+    .notion-dark #desc { color:#BDB4B1; }
+    .notion-dark #metadata { color:#A49792; }
+    .notion-dark #timer-section { border-left:1px solid #4A4744; }
+    .notion-dark #timerDisplay { color:#E1DCD8; }
+    .notion-dark #controls button { color:#fff; }
+    .notion-dark #startQuest { background:#66564D; }
+    .notion-dark #startQuest:hover { background:#7F6E67; }
+    .notion-dark #completeQuest { background:#4F695E; }
+    .notion-dark #completeQuest:hover { background:#6B857A; }
+    .notion-dark #expiresLabel { color:#AAA; }
+  </style>
+</head>
+<body>
+  <div id="app-container">
+    <div id="dragon-container">
+      <img id="dragon-img" src="https://i.imgur.com/4OrXc8q.gif" alt="Idle Dragon"/>
+      <button id="showQuestBtn" class="hidden">Show Quest</button>
+    </div>
+
+    <div id="quest-container" class="hidden">
+      <button id="exitQuest" title="Exit">✕</button>
+      <div id="quest-widget">
+        <div id="quest-details">
+          <div id="title-box">
+          <h2 id="title"></h2>
+          <button id="refreshQuest" title="Refresh Quest (3 left)">⟳</button>
+          </div>
+          <p id="desc"></p>
+          <div id="metadata"><span id="difficulty"></span><span id="xp"></span></div>
+        </div>
+        <div id="timer-section"><div id="timerDisplay">00:00</div></div>
+      </div>
+      <div id="expiresLabel"></div>
+      <div id="controls"><button id="startQuest">Start</button><button id="completeQuest">Complete</button></div>
+    </div>
+
+    <div id="completionPopup" class="hidden"></div>
+  </div>
+
+  <script>
+    const idleSrc       = 'https://i.imgur.com/4OrXc8q.gif',
+          alertSrc      = 'https://i.imgur.com/VgbDE5q.gif',
+          randomnessMax = 1 * 60 * 60 * 1000,
+          expiration    = 4 * 60 * 60 * 1000,
+          popupDur      = 5000;
+
+    const dragonCont  = document.getElementById('dragon-container'),
+          dragonImg   = document.getElementById('dragon-img'),
+          showBtn     = document.getElementById('showQuestBtn'),
+          questCont   = document.getElementById('quest-container'),
+          exitBtn     = document.getElementById('exitQuest'),
+          refreshBtn  = document.getElementById('refreshQuest'),
+          expiresLbl  = document.getElementById('expiresLabel'),
+          titleEl     = document.getElementById('title'),
+          descEl      = document.getElementById('desc'),
+          diffEl      = document.getElementById('difficulty'),
+          xpEl        = document.getElementById('xp'),
+          timerEl     = document.getElementById('timerDisplay'),
+          startBtn    = document.getElementById('startQuest'),
+          completeBtn = document.getElementById('completeQuest'),
+          popup       = document.getElementById('completionPopup');
+
+    let quests = [], alertExpire, questExpire, timerInt, refreshCount = 3, currentQ;
+
+    function formatTime(sec) {
+      const m = Math.floor(sec/60), s = sec%60;
+      return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+    function clearTimer() { timerInt && clearInterval(timerInt); timerInt=null; }
+    function clearExp()   { clearTimeout(alertExpire); clearTimeout(questExpire); alertExpire=questExpire=null; }
+
+    function parseCSV(text) {
+      return text.trim().split('\n').slice(1).map(line => {
+        const parts    = line.split(',');
+        const title    = parts[0].trim();
+        const xp       = Number(parts[parts.length-2].trim());
+        const duration = Number(parts[parts.length-1].trim());
+        const desc     = parts.slice(1, parts.length-2).join(',').trim();
+        return { title, desc, xp, duration };
+      });
+    }
+
+    fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS_KxA9MEnEnOO56kpyRuR6jXO2Pc7t6E5vAw5oxqKpz4F7X6F7Ght9t3HEzZsi90CxYCkd82H_l0ye/pub?gid=1562636488&single=true&output=csv')
+      .then(r => r.text())
+      .then(text => { quests = parseCSV(text); })
+      .then(initWidget);
+
+    function loadQuest() {
+      clearTimer(); clearExp();
+      currentQ = quests[Math.floor(Math.random()*quests.length)];
+      titleEl.textContent = currentQ.title;
+      descEl.textContent   = currentQ.desc;
+      diffEl.textContent   = `Duration: ${currentQ.duration} min`;
+      xpEl.textContent     = `Reward: ${currentQ.xp} XP`;
+      timerEl.textContent  = formatTime(currentQ.duration*60);
+      startBtn.disabled    = false;
+      expiresLbl.style.opacity = '1';
+      expiresLbl.textContent   = `Expires at ${new Date(Date.now()+expiration)
+        .toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}`;
+      questExpire = setTimeout(() => { exitToIdle(); scheduleAlert(); }, expiration);
+    }
+
+    function startQuest() {
+      clearTimer(); clearTimeout(questExpire); questExpire=null;
+      let rem = currentQ.duration*60;
+      startBtn.disabled=true;
+      expiresLbl.style.opacity='0';
+      timerEl.textContent=formatTime(rem);
+      timerInt=setInterval(() => {
+        rem--;
+        timerEl.textContent=formatTime(rem);
+        if(rem<=0) { clearTimer(); startBtn.disabled=false; }
+      },1000);
+    }
+
+    function fadeTo(src, cb) {
+      dragonCont.style.opacity='0';
+      setTimeout(() => {
+        dragonImg.src=src;
+        dragonCont.style.opacity='1';
+        cb && cb();
+      },500);
+    }
+
+    function showAlert() {
+      fadeTo(alertSrc, () => {
+        showBtn.classList.add('visible'); showBtn.classList.remove('hidden');
+        clearExp();
+        alertExpire=setTimeout(() => { cancelAlert(); scheduleAlert(); }, expiration);
+      });
+    }
+
+    function cancelAlert() {
+      clearExp();
+      showBtn.classList.remove('visible'); showBtn.classList.add('hidden');
+      fadeTo(idleSrc);
+    }
+
+    function exitToIdle() {
+      clearTimer(); clearExp();
+      questCont.classList.add('hidden');
+      showBtn.classList.remove('visible'); showBtn.classList.add('hidden');
+      dragonCont.classList.remove('hidden');
+      fadeTo(idleSrc);
+    }
+
+    function showCompletion() {
+      popup.textContent = `Great job completing “${currentQ.title}”! Don’t forget to record your ${currentQ.xp} XP.`;
+      popup.classList.add('visible'); popup.classList.remove('hidden');
+      setTimeout(() => {
+        popup.classList.remove('visible'); popup.classList.add('hidden');
+      }, popupDur);
+    }
+
+    function scheduleAlert() {
+      clearExp();
+      showBtn.classList.remove('visible'); showBtn.classList.add('hidden');
+      dragonCont.classList.remove('hidden');
+      fadeTo(idleSrc);
+      setTimeout(showAlert, Math.random()*randomnessMax);
+    }
+
+    // Notion theme sync
+    window.addEventListener('message', e => {
+      if(e.data && e.data.theme) document.body.classList.toggle('notion-dark', e.data.theme==='dark');
+    });
+
+    function initWidget() {
+      dragonImg.src=idleSrc;
+      dragonCont.style.opacity='1';
+      questCont.classList.add('hidden');
+      popup.classList.add('hidden');
+      showBtn.classList.add('hidden');
+      showBtn.addEventListener('click', () => {
+        clearExp(); questCont.classList.remove('hidden'); dragonCont.classList.add('hidden');
+        loadQuest();
+        refreshCount=3; refreshBtn.disabled=false;
+        refreshBtn.title=`Refresh Quest (${refreshCount} left)`;
+      });
+      exitBtn.addEventListener('click', () => { exitToIdle(); scheduleAlert(); });
+      completeBtn.addEventListener('click', () => {
+        showCompletion(); setTimeout(() => { exitToIdle(); scheduleAlert(); }, popupDur);
+      });
+      startBtn.addEventListener('click', startQuest);
+      refreshBtn.addEventListener('click', () => {
+        if(refreshCount>0){ loadQuest(); refreshCount--; refreshBtn.title=`Refresh Quest (${refreshCount} left)`; if(refreshCount===0) refreshBtn.disabled=true; }
+      });
+      scheduleAlert();
+    }
+  </script>
+</body>
+</html>
